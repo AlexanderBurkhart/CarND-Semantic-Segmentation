@@ -37,11 +37,11 @@ def load_vgg(sess, vgg_path):
 
     image_input = tf.get_default_graph().get_tensor_by_name(vgg_input_tensor_name);
     keep_prob = tf.get_default_graph().get_tensor_by_name(vgg_keep_prob_tensor_name);
-    layer3_out = tf.get_default_graph().get_tensor_by_name(vgg_layer3_out_tensor_name);
-    layer4_out = tf.get_default_graph().get_tensor_by_name(vgg_layer4_out_tensor_name);
-    layer7_out = tf.get_default_graph().get_tensor_by_name(vgg_layer7_out_tensor_name);
+    layer3 = tf.get_default_graph().get_tensor_by_name(vgg_layer3_out_tensor_name);
+    layer4 = tf.get_default_graph().get_tensor_by_name(vgg_layer4_out_tensor_name);
+    layer7 = tf.get_default_graph().get_tensor_by_name(vgg_layer7_out_tensor_name);
 
-    return image_input, keep_prob, layer3_out, layer4_out, layer7_out
+    return image_input, keep_prob, layer3, layer4, layer7
 tests.test_load_vgg(load_vgg, tf)
 
 
@@ -55,39 +55,39 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     :return: The Tensor for the last layer of output
     """
     # TODO: Implement function
-    layer7a_out = tf.layers.conv2d(vgg_layer7_out, num_classes, 1,
+    layer7_conv = tf.layers.conv2d(vgg_layer7_out, num_classes, 1,
                                         padding= 'same',
                                         kernel_initializer= tf.random_normal_initializer(stddev=0.01),
                                         kernel_regularizer= tf.contrib.layers.l2_regularizer(1e-3))
 
-    layer4a_in1 = tf.layers.conv2d_transpose(layer7a_out, num_classes, 4,
+    layer_up1 = tf.layers.conv2d_transpose(layer7_conv, num_classes, 4,
                                                 strides= (2,2),
                                                 padding= 'same',
                                                 kernel_initializer= tf.random_normal_initializer(stddev=0.01),
                                                 kernel_regularizer= tf.contrib.layers.l2_regularizer(1e-3))
 
-    layer4a_in2 = tf.layers.conv2d(vgg_layer4_out, num_classes, 1,
+    layer4_conv = tf.layers.conv2d(vgg_layer4_out, num_classes, 1,
                                         padding= 'same',
                                         kernel_initializer= tf.random_normal_initializer(stddev=0.01),
                                         kernel_regularizer= tf.contrib.layers.l2_regularizer(1e-3))
 
-    layer4a_out = tf.add(layer4a_in1, layer4a_in2)
+    skip_layer1 = tf.add(layer_up1, layer4_conv)
 
 
-    layer3a_in1 = tf.layers.conv2d_transpose(vgg_layer4_out, num_classes, 4,
+    layer_up2 = tf.layers.conv2d_transpose(vgg_layer4_out, num_classes, 4,
                                         strides= (2, 2),
                                         padding= 'same',
                                         kernel_initializer= tf.random_normal_initializer(stddev=0.01),
                                         kernel_regularizer = tf.contrib.layers.l2_regularizer(1e-3))
 
-    layer3a_in2 = tf.layers.conv2d(vgg_layer3_out, num_classes, 1,
+    layer3_conv = tf.layers.conv2d(vgg_layer3_out, num_classes, 1,
                                         padding= 'same',
                                         kernel_initializer= tf.random_normal_initializer(stddev=0.01),
                                         kernel_regularizer= tf.contrib.layers.l2_regularizer(1e-3))
 
-    layer3a_out = tf.add(layer3a_in1, layer3a_in2)
+    skip_layer2 = tf.add(layer_up2, layer3_conv)
 
-    nn_last_layer = tf.layers.conv2d_transpose(layer3a_out, num_classes, 16,
+    last_layer = tf.layers.conv2d_transpose(skip_layer2, num_classes, 16,
                                                 strides= (8,8),
                                                 padding= 'same',
                                                 kernel_initializer= tf.random_normal_initializer(stddev=0.01),
@@ -95,7 +95,7 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
 
 
 
-    return nn_last_layer
+    return last_layer
 tests.test_layers(layers)
 
 
@@ -147,6 +147,7 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
                 _, loss = sess.run([train_op, cross_entropy_loss],
                                         feed_dict={input_image: image, correct_label: label,
                                         keep_prob: 0.5, learning_rate: 0.0009})
+                print("Loss: = {}".format(loss))
         print()
 tests.test_train_nn(train_nn)
 
