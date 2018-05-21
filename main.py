@@ -55,38 +55,47 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     :return: The Tensor for the last layer of output
     """
     # TODO: Implement function
+    
+    #1x1 convolution of layer 7
     layer7_conv = tf.layers.conv2d(vgg_layer7_out, num_classes, 1,
                                         padding= 'same',
                                         kernel_initializer= tf.random_normal_initializer(stddev=0.01),
                                         kernel_regularizer= tf.contrib.layers.l2_regularizer(1e-3))
 
+    #upsample
     layer_up1 = tf.layers.conv2d_transpose(layer7_conv, num_classes, 4,
                                                 strides= (2,2),
                                                 padding= 'same',
                                                 kernel_initializer= tf.random_normal_initializer(stddev=0.01),
                                                 kernel_regularizer= tf.contrib.layers.l2_regularizer(1e-3))
-
+    
+    #1x1 convolution of layer 4
     layer4_conv = tf.layers.conv2d(vgg_layer4_out, num_classes, 1,
                                         padding= 'same',
                                         kernel_initializer= tf.random_normal_initializer(stddev=0.01),
                                         kernel_regularizer= tf.contrib.layers.l2_regularizer(1e-3))
 
+    #skip layer
     skip_layer1 = tf.add(layer_up1, layer4_conv)
 
 
+    #upsample
     layer_up2 = tf.layers.conv2d_transpose(vgg_layer4_out, num_classes, 4,
                                         strides= (2, 2),
                                         padding= 'same',
                                         kernel_initializer= tf.random_normal_initializer(stddev=0.01),
                                         kernel_regularizer = tf.contrib.layers.l2_regularizer(1e-3))
 
+    #1x1 convolution of layer 3
     layer3_conv = tf.layers.conv2d(vgg_layer3_out, num_classes, 1,
                                         padding= 'same',
                                         kernel_initializer= tf.random_normal_initializer(stddev=0.01),
                                         kernel_regularizer= tf.contrib.layers.l2_regularizer(1e-3))
 
+    #skip layer
     skip_layer2 = tf.add(layer_up2, layer3_conv)
 
+    #upsample
     last_layer = tf.layers.conv2d_transpose(skip_layer2, num_classes, 16,
                                                 strides= (8,8),
                                                 padding= 'same',
@@ -110,12 +119,16 @@ def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
     """
     # TODO: Implement function
 
+    #creating logits
     logits = tf.reshape(nn_last_layer, (-1, num_classes))
     correct_label = tf.reshape(correct_label, (-1, num_classes))
 
+    #creating loss function
     cross_entropy_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits= logits, labels= correct_label))
 
+    #initializing an optimizer
     optimizer = tf.train.AdamOptimizer(learning_rate= learning_rate)
+    #applying the optimizer to the loss function
     train_op = optimizer.minimize(cross_entropy_loss)
 
     return logits, train_op, cross_entropy_loss
