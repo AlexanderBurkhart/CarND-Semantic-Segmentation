@@ -80,7 +80,7 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
 
 
     #upsample
-    layer_up2 = tf.layers.conv2d_transpose(vgg_layer4_out, num_classes, 4,
+    layer_up2 = tf.layers.conv2d_transpose(skip_layer1, num_classes, 4,
                                         strides= (2, 2),
                                         padding= 'same',
                                         kernel_initializer= tf.random_normal_initializer(stddev=0.01),
@@ -125,13 +125,17 @@ def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
 
     #creating loss function
     cross_entropy_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits= logits, labels= correct_label))
+    reg_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
+    reg_constant = 0.05
+    loss = cross_entropy_loss + reg_constant * sum(reg_losses)
 
     #initializing an optimizer
     optimizer = tf.train.AdamOptimizer(learning_rate= learning_rate)
-    #applying the optimizer to the loss function
-    train_op = optimizer.minimize(cross_entropy_loss)
 
-    return logits, train_op, cross_entropy_loss
+    #applying the optimizer to the loss function
+    train_op = optimizer.minimize(loss)
+
+    return logits, train_op, loss
 tests.test_optimize(optimize)
 
 
@@ -190,7 +194,7 @@ def run():
 
         # TODO: Build NN using load_vgg, layers, and optimize function
 
-        epochs = 50;
+        epochs = 25;
         batch_size = 5;
 
         correct_label = tf.placeholder(tf.int32, [None, None, None, num_classes], name='correct_label')
